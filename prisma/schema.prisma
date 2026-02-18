@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                       String           @id @default(uuid())
+  email                    String           @unique
+  password                 String
+  name                     String
+  role                     String           @default("STUDENT")
+  status                   String           @default("ACTIVE")
+  avatar                   String?
+  phone                    String?
+  fathersName              String?
+  mothersName              String?
+  gender                   String?
+  dateOfBirth              DateTime?
+  presentAddress           String?
+  permanentAddress         String?
+  bloodGroup               String?
+  nationalId               String?
+  occupation               String?
+  institution              String?
+  educationalQualification String?
+  emergencyContact         String?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  lastLoginAt              DateTime?
+  activityLogs             ActivityLog[]
+  createdCourses           Course[]         @relation("CreatedCourses")
+  enrollments              Enrollment[]
+  createdExams             Exam[]           @relation("CreatedExams")
+  examSubmissions          ExamSubmission[]
+  grades                   Grade[]          @relation("GradedBy")
+  notifications            Notification[]
+  writtenAnswers           WrittenAnswer[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model SiteSettings {
+  id           String   @id @default("default")
+  siteName     String   @default("Namelyze Law Academy")
+  siteTagline  String?  @default("ব্যতিক্রমধর্মী আইন শিক্ষা প্রতিষ্ঠান")
+  logoUrl      String?
+  contactEmail String?  @default("namelyzelaw@gmail.com")
+  contactPhone String?  @default("০১৬২২-২৪১০০৪")
+  address      String?  @default("ফার্মগেট শাখাঃ ৬৮/১, কনকর্ড টাওয়ার (৪র্থ তলা), গ্রিন রোড, ফার্মগেট, ঢাকা-১২১৫")
+  facebookUrl  String?  @default("https://facebook.com/namelyzelaw")
+  youtubeUrl   String?  @default("https://youtube.com/@namelyzelaw")
+  instagramUrl String?
+  linkedinUrl  String?
+  heroSliders  String?
+  marqueeText  String?
+  updatedAt    DateTime @updatedAt
+}
+
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  code        String       @unique
+  thumbnail   String?
+  teacherId   String
+  isPublished Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  chapters    Chapter[]
+  teacher     User         @relation("CreatedCourses", fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+  exams       Exam[]
+
+  @@index([teacherId])
+  @@index([code])
+}
+
+model Chapter {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  order       Int
+  courseId    String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  materials   Material[]
+
+  @@index([courseId])
+}
+
+model Material {
+  id          String   @id @default(uuid())
+  title       String
+  type        String
+  fileUrl     String?
+  content     String?
+  duration    Int?
+  fileSize    Int?
+  order       Int
+  chapterId   String
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  studentId   String
+  courseId    String
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  progress    Float     @default(0)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student     User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+model Exam {
+  id               String           @id @default(uuid())
+  title            String
+  description      String?
+  type             String
+  status           String           @default("DRAFT")
+  courseId         String
+  teacherId        String
+  startTime        DateTime?
+  endTime          DateTime?
+  duration         Int
+  totalMarks       Float
+  passingMarks     Float
+  shuffleQuestions Boolean          @default(false)
+  showResults      Boolean          @default(true)
+  allowReview      Boolean          @default(false)
+  enableProctoring Boolean          @default(false)
+  preventTabSwitch Boolean          @default(false)
+  requireCamera    Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  teacher          User             @relation("CreatedExams", fields: [teacherId], references: [id])
+  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  submissions      ExamSubmission[]
+  questions        Question[]
+
+  @@index([courseId])
+  @@index([teacherId])
+  @@index([status])
+}
+
+model Question {
+  id             String          @id @default(uuid())
+  examId         String
+  type           String
+  questionText   String
+  order          Int
+  marks          Float
+  optionA        String?
+  optionB        String?
+  optionC        String?
+  optionD        String?
+  correctAnswer  String?
+  wordLimit      Int?
+  expectedAnswer String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  mcqAnswers     MCQAnswer[]
+  exam           Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  writtenAnswers WrittenAnswer[]
+
+  @@index([examId])
+}
+
+model ExamSubmission {
+  id             String          @id @default(uuid())
+  examId         String
+  studentId      String
+  status         String          @default("NOT_STARTED")
+  startedAt      DateTime?
+  submittedAt    DateTime?
+  totalScore     Float?
+  obtainedScore  Float           @default(0)
+  percentage     Float           @default(0)
+  tabSwitchCount Int             @default(0)
+  screenshotUrls String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  student        User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam           Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  grade          Grade?
+  mcqAnswers     MCQAnswer[]
+  writtenAnswers WrittenAnswer[]
+
+  @@unique([examId, studentId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model MCQAnswer {
+  id             String         @id @default(uuid())
+  submissionId   String
+  questionId     String
+  selectedAnswer String
+  isCorrect      Boolean
+  marksObtained  Float
+  createdAt      DateTime       @default(now())
+  question       Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  submission     ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([submissionId])
+  @@index([questionId])
+}
+
+model WrittenAnswer {
+  id            String         @id @default(uuid())
+  submissionId  String
+  questionId    String
+  studentId     String
+  answerText    String?
+  answerFileUrl String?
+  marksObtained Float?
+  feedback      String?
+  gradedAt      DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  student       User           @relation(fields: [studentId], references: [id])
+  question      Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  submission    ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([submissionId])
+  @@index([questionId])
+  @@index([studentId])
+}
+
+model Grade {
+  id           String         @id @default(uuid())
+  submissionId String         @unique
+  grade        String
+  remarks      String?
+  gradedById   String
+  publishedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  gradedBy     User           @relation("GradedBy", fields: [gradedById], references: [id])
+  submission   ExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+model PerformanceMetric {
+  id                 String   @id @default(uuid())
+  studentId          String
+  courseId           String
+  examId             String
+  score              Float
+  percentage         Float
+  rank               Int?
+  weakTopics         String?
+  strongTopics       String?
+  avgTimePerQuestion Float?
+  totalTimeTaken     Int?
+  createdAt          DateTime @default(now())
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([examId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  userId       String
+  activityType String
+  description  String
+  metadata     String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([activityType])
+  @@index([createdAt])
+}
